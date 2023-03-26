@@ -3,6 +3,8 @@ const catchAsynncErrors = require("../middleware/catchAsyncErrors.js");
 const User = require("../model/userModel.js");
 const sendToken = require("../utils/JwtToken.js");
 const sendEmail = require("../utils/sendEmail.js");
+const crypto = require("crypto");
+const catchAsyncErrors = require("../middleware/catchAsyncErrors.js");
 
 exports.registerUser = catchAsynncErrors(async (req, res, next) => {
   const { name, email, password } = req.body;
@@ -67,11 +69,12 @@ exports.forgotPassword = catchAsynncErrors(async (req, res, next) => {
   
   `;
   try {
-    await sendEmail({
+    sendEmail({
       email: user.email,
       subject: "Ecommerce Password Protocol",
       message: message,
     });
+
     res.status(200).json({
       success: true,
       message: `Email is Sended to ${user.email} this email Address`,
@@ -81,4 +84,72 @@ exports.forgotPassword = catchAsynncErrors(async (req, res, next) => {
     user.resetPasswordExpire = null;
     user.save({ validateBeforeSave: false });
   }
+});
+
+exports.resetPassword = catchAsynncErrors(async (req, res, next) => {
+  const resetPasswordToken = crypto
+    .createHash("sha256")
+    .update(req.params.token)
+    .digest("hex");
+  const user = User.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+  if (!user) {
+    return next(
+      new ErrorHandler("User is Not Found or Token Has Been Expired", 404)
+    );
+  }
+  if (req.body.password !== req.body.confirmPassword) {
+    new ErrorHandler("Password is Not Matched", 404);
+  }
+
+  user.password = req.body.password;
+  user.resetPasswordExpire = undefined;
+  user.resetPasswordToken = undefined;
+
+  await user.save();
+  sendToken(user, 200, res);
+});
+
+exports.getuserDetail = catchAsyncErrors(async (req, res, next) => {
+  const users = await User.findById(req.user.id);
+  res.status(200).json({
+    success: true,
+    users,
+  });
+});
+
+exports.updatePassword = catchAsyncErrors(async (req, res, next) => {
+  const user = await User.findById(req.user.id).select("+password");
+  const isMatched = user.MatchedPassword(req.body.oldPassword);
+
+  if (!isMatched) {
+    return next(new ErrorHandler("Invalid Email and Password", 400));
+  }
+
+  if (req.body.newPassword !== req.body.confirmPassword) {
+    return next(new ErrorHandler("Password is Incorrect", 400));
+  }
+
+  user.password = req.body.newPassword;
+
+  await user.save();
+  sendToken(user, 200, res);
+});
+
+exports.updateProfile = catchAsyncErrors(async (req, res, next) => {
+  const newProfile = {
+    name: req.body.name,
+    email: req.body.email,
+  };
+  const user = User.findByIdAndUpdate(req.user.id, newProfile, {
+    new: true,
+    runValidators: true,
+    useFindAndModify: false,
+  });
+  res.status(200).json({
+    success: true,
+    user,
+  });
 });
