@@ -10,6 +10,10 @@ const {
   getuserDetail,
   updatePassword,
   updateProfile,
+  getAllUser,
+  getSingleUser,
+  deleteUser,
+  updateUser,
 } = require("../controllers/userController.js");
 
 const router = express.Router();
@@ -27,6 +31,16 @@ router.route("/me").get(isAuthenticated, getuserDetail);
 
 router.route("/password/update").put(isAuthenticated, updatePassword);
 
-router.route("/update/profile").put(isAuthenticated, updateProfile);
+router.route("/me/update").put(isAuthenticated, updateProfile);
+
+router
+  .route("/admin/user")
+  .get(isAuthenticated, isAuthorizedRole("admin"), getAllUser);
+
+router
+  .route("/admin/user/:id")
+  .get(isAuthenticated, isAuthorizedRole("admin"), getSingleUser)
+  .put(isAuthenticated, isAuthorizedRole("admin"), updateUser)
+  .delete(isAuthenticated, isAuthorizedRole("admin"), deleteUser);
 
 module.exports = router;

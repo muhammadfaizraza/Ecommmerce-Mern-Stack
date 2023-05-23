@@ -1,34 +1,35 @@
-const { JsonWebTokenError } = require("jsonwebtoken");
-const ErrorHandler = require("../utils/Errorhandler.js");
+const ErrorHandler = require("../utils/Errorhandler");
 
 module.exports = (err, req, res, next) => {
-  (err.statusCode = err.statusCode || 500),
-    (err.message = err.message || "internal server error");
+  err.statusCode = err.statusCode || 500;
+  err.message = err.message || "Internal Server Error";
 
+  // Wrong Mongodb Id error
   if (err.name === "CastError") {
-    const message = `Resource not found ${err.path}`;
+    const message = `Resource not found. Invalid: ${err.path}`;
     err = new ErrorHandler(message, 400);
   }
 
-  //Duplication Error in Mongoose
-  if ((err.statusCode = 11000)) {
-    const message = `Duplicate Entry ${Object.keys(err.keyValue)}`;
+  // Mongoose duplicate key error
+  if (err.code === 11000) {
+    const message = `Duplicate ${Object.keys(err.keyValue)} Entered`;
     err = new ErrorHandler(message, 400);
   }
 
-  if ((err.name = "JsonWebTokenError")) {
-    const message = `Json Web Token is Invalid `;
+  // Wrong JWT error
+  if (err.name === "JsonWebTokenError") {
+    const message = `Json Web Token is invalid, Try again `;
     err = new ErrorHandler(message, 400);
   }
 
-  if ((err.name = "TokenExpiredError")) {
-    const message = `Json Web Token is Expired `;
+  // JWT EXPIRE error
+  if (err.name === "TokenExpiredError") {
+    const message = `Json Web Token is Expired, Try again `;
     err = new ErrorHandler(message, 400);
   }
-  //------wrong mongo id errorhandling------cast error///
+
   res.status(err.statusCode).json({
     success: false,
     message: err.message,
   });
-  console.log(err.keyValue);
 };

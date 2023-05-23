@@ -143,7 +143,7 @@ exports.updateProfile = catchAsyncErrors(async (req, res, next) => {
     name: req.body.name,
     email: req.body.email,
   };
-  const user = User.findByIdAndUpdate(req.user.id, newProfile, {
+  const user = await User.findByIdAndUpdate(req.user.id, newProfile, {
     new: true,
     runValidators: true,
     useFindAndModify: false,
@@ -151,5 +151,55 @@ exports.updateProfile = catchAsyncErrors(async (req, res, next) => {
   res.status(200).json({
     success: true,
     user,
+  });
+});
+
+exports.getAllUser = catchAsyncErrors(async (req, res, next) => {
+  const users = await User.find();
+  res.status(200).json({
+    success: true,
+    users,
+  });
+});
+
+exports.getSingleUser = catchAsyncErrors(async (req, res, next) => {
+  const user = await User.findById(req.params.id);
+
+  if (!user) {
+    return next(new ErrorHandler(`User is Not Exist ${req.params.id}`));
+  }
+  res.status(200).json({
+    success: true,
+    user,
+  });
+});
+
+exports.updateUser = catchAsyncErrors(async (req, res, next) => {
+  const newProfile = {
+    name: req.body.name,
+    email: req.body.email,
+    role: req.body.role,
+  };
+  const user = await User.findByIdAndUpdate(req.params.id, newProfile, {
+    new: true,
+    runValidators: true,
+    useFindAndModify: false,
+  });
+  res.status(200).json({
+    success: true,
+  });
+});
+
+exports.deleteUser = catchAsyncErrors(async (req, res, next) => {
+  const user = await User.findById(req.params.id);
+
+  if (!user) {
+    return next(new ErrorHandler("User Not Found"));
+  }
+
+  await User.findByIdAndDelete(user);
+  res.status(200).json({
+    success: true,
+    message: "User Deleted Successfully",
   });
 });
